@@ -5,14 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#ffffff">
   <meta name="description" content="Neurology OPD voice scribe for structured, editable visit notes.">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Doctor WOYZ">
   <title>Doctor WOYZ</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="icon-192.png" sizes="192x192" type="image/png">
-  <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -65,120 +58,6 @@
       min-height: 100dvh;
       display: flex;
       flex-direction: column;
-    }
-
-    .app.locked {
-      display: none;
-    }
-
-    .approval-gate {
-      min-height: 100vh;
-      min-height: 100dvh;
-      display: grid;
-      place-items: center;
-      padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
-      background: var(--bg);
-    }
-
-    .approval-gate.hidden {
-      display: none;
-    }
-
-    .approval-card {
-      width: min(100%, 440px);
-      padding: 26px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--panel);
-      box-shadow: var(--shadow);
-    }
-
-    .approval-brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 22px;
-      font-size: 22px;
-      font-weight: 800;
-    }
-
-    .approval-brand .brand-mark {
-      width: 40px;
-      height: 40px;
-      border-radius: 8px;
-      font-size: 23px;
-    }
-
-    .approval-card h1 {
-      margin: 0 0 8px;
-      font-size: 24px;
-    }
-
-    .approval-card p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.55;
-    }
-
-    .approval-field {
-      margin-top: 18px;
-    }
-
-    .approval-field label {
-      display: block;
-      margin-bottom: 7px;
-      color: var(--text);
-      font-size: 13px;
-      font-weight: 750;
-    }
-
-    .approval-field input {
-      width: 100%;
-      min-height: 46px;
-      border: 1px solid var(--line);
-      border-radius: 7px;
-      padding: 10px 12px;
-      color: var(--text);
-      background: var(--bg);
-      font: 600 15px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      text-transform: uppercase;
-      outline: none;
-    }
-
-    .approval-field input:focus {
-      border-color: var(--blue);
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-    }
-
-    .request-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 8px;
-    }
-
-    .request-row button,
-    .approve-button {
-      min-height: 46px;
-      border: 0;
-      border-radius: 7px;
-      color: #ffffff;
-      background: var(--blue);
-      padding: 10px 14px;
-      font-weight: 800;
-      cursor: pointer;
-    }
-
-    .approve-button {
-      width: 100%;
-      margin-top: 18px;
-    }
-
-    .approval-message {
-      min-height: 20px;
-      margin-top: 12px !important;
-      color: #b42318 !important;
-      font-size: 13px !important;
     }
 
     .topbar {
@@ -1215,7 +1094,6 @@
     }
 
     @media (max-width: 390px) {
-      .approval-card { padding: 22px 18px; }
       .brand-title { font-size: 18px; }
       .new-button { font-size: 0; padding: 10px; }
       .new-button svg { width: 19px; height: 19px; }
@@ -1225,25 +1103,7 @@
   </style>
 </head>
 <body>
-  <section class="approval-gate" id="approvalGate">
-    <div class="approval-card">
-      <div class="approval-brand"><span class="brand-mark">W</span><span>Doctor WOYZ</span></div>
-      <h1>Device approval required</h1>
-      <p id="approvalStatusText" hidden></p>
-      <div class="approval-field">
-        <label for="doctorName">Doctor's name</label>
-        <input id="doctorName" type="text" autocomplete="name" placeholder="Dr. Name">
-      </div>
-      <div class="approval-field">
-        <label for="deviceName">Device name</label>
-        <input id="deviceName" type="text" autocomplete="off" placeholder="OPD Room 1">
-      </div>
-      <button class="approve-button" id="registerDeviceButton" type="button">Request approval</button>
-      <p class="approval-message" id="approvalMessage"></p>
-    </div>
-  </section>
-
-  <div class="app locked" id="app">
+  <div class="app" id="app">
     <header class="topbar">
       <div class="topbar-inner">
         <button class="brand" id="brandButton" type="button" title="New dictation">
@@ -1504,26 +1364,6 @@
 
   <script type="module">
     import { processWithBrowserGemini } from "./browser-gemini.js";
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-    import { doc, getFirestore, onSnapshot, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: ["AIzaSyDaSqQLix", "jaib7hfsv9hsLzebWU_kZuLmY"].join(""),
-      authDomain: "woyz-be9e5.firebaseapp.com",
-      projectId: "woyz-be9e5",
-      storageBucket: "woyz-be9e5.firebasestorage.app",
-      messagingSenderId: "757935575451",
-      appId: "1:757935575451:web:4adba5f60e49346cce513e",
-      measurementId: "G-LBPXGJCKRB"
-    };
-
-    const firebaseApp = initializeApp(firebaseConfig);
-    const auth = getAuth(firebaseApp);
-    const db = getFirestore(firebaseApp);
-    const REQUIRE_FIREBASE_DEVICE_APPROVAL = false;
-    let currentDeviceRef = null;
-    let currentDeviceData = null;
 
     const state = {
       mediaRecorder: null,
@@ -1555,68 +1395,6 @@
     const status = document.getElementById("status");
     const DEFAULT_RECORDING_SECONDS = 300;
     const EXTEND_SECONDS = 300;
-    function showApprovedApp() {
-      const approvalGate = document.getElementById("approvalGate");
-      const app = document.getElementById("app");
-      approvalGate.classList.add("hidden");
-      app.classList.remove("locked");
-    }
-
-    function showApprovalGate() {
-      document.getElementById("approvalGate").classList.remove("hidden");
-      document.getElementById("app").classList.add("locked");
-    }
-
-    function showDeviceState(data) {
-      currentDeviceData = data;
-      const statusText = document.getElementById("approvalStatusText");
-      const message = document.getElementById("approvalMessage");
-      const registerButton = document.getElementById("registerDeviceButton");
-      if (!data) {
-        showApprovalGate();
-        statusText.textContent = "";
-        statusText.hidden = true;
-        message.textContent = "";
-        registerButton.disabled = false;
-        return;
-      }
-      document.getElementById("doctorName").value = data.doctorName || "";
-      document.getElementById("deviceName").value = data.deviceName || "";
-      if (data.status === "approved") {
-        showApprovedApp();
-        return;
-      }
-      if (data.status === "blocked") {
-        showApprovalGate();
-        statusText.hidden = false;
-        statusText.textContent = "This device has been blocked by the administrator.";
-        message.textContent = "Contact the administrator if access should be restored.";
-        registerButton.disabled = true;
-        return;
-      }
-      showApprovalGate();
-      statusText.hidden = false;
-      statusText.textContent = "Approval request submitted. Keep this page open or return later after the administrator approves it.";
-      message.textContent = "Status: Pending approval";
-      registerButton.disabled = true;
-    }
-
-    async function initializeDeviceApproval() {
-      const message = document.getElementById("approvalMessage");
-      try {
-        if (!auth.currentUser) await signInAnonymously(auth);
-        const user = auth.currentUser;
-        currentDeviceRef = doc(db, "devices", user.uid);
-        onSnapshot(currentDeviceRef, snapshot => {
-          showDeviceState(snapshot.exists() ? snapshot.data() : null);
-        }, error => {
-          message.textContent = `Unable to read device status: ${error.message}`;
-        });
-      } catch (error) {
-        message.textContent = `Firebase connection failed: ${error.message}`;
-      }
-    }
-
     function icon(name) {
       const icons = {
         pause: '<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"></path></svg>',
@@ -2545,34 +2323,6 @@
     });
     document.getElementById("brandButton").addEventListener("click", resetScribe);
     document.getElementById("newButton").addEventListener("click", resetScribe);
-    document.getElementById("registerDeviceButton").addEventListener("click", async event => {
-      const doctorName = document.getElementById("doctorName").value.trim();
-      const deviceName = document.getElementById("deviceName").value.trim();
-      const message = document.getElementById("approvalMessage");
-      if (!doctorName || !deviceName) {
-        message.textContent = "Enter the doctor's name and a recognizable device name.";
-        return;
-      }
-      if (!currentDeviceRef) {
-        message.textContent = "Still connecting to Firebase. Please try again.";
-        return;
-      }
-      event.currentTarget.disabled = true;
-      try {
-        await setDoc(currentDeviceRef, {
-          ownerUid: auth.currentUser.uid,
-          doctorName: doctorName.slice(0, 80),
-          deviceName: deviceName.slice(0, 80),
-          status: "pending",
-          registeredAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        });
-        message.textContent = "Status: Pending approval";
-      } catch (error) {
-        message.textContent = `Registration failed: ${error.message}`;
-        event.currentTarget.disabled = false;
-      }
-    });
     localStorage.removeItem("doctor_woyz_api_key");
     localStorage.removeItem("opd_demo_ai_model_v2");
     document.querySelectorAll(".section textarea").forEach(textarea => {
@@ -2589,18 +2339,6 @@
     updateModeUi();
     focusKeyboardShortcuts();
     scheduleTextareaResize();
-    if (REQUIRE_FIREBASE_DEVICE_APPROVAL) {
-      initializeDeviceApproval();
-    } else {
-      showApprovedApp();
-    }
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js").catch(error => {
-          console.warn("Service worker registration failed:", error);
-        });
-      });
-    }
   </script>
 </body>
 </html>

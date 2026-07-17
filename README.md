@@ -1,53 +1,33 @@
-# Doctor WOYZ Without Cloud Function
+# Doctor WOYZ Browser Gemini
 
-Browser-only Gemini API clone of Doctor WOYZ.
+Simple browser-only Doctor WOYZ clone.
 
-This clone preserves the Doctor WOYZ static UI and recording flows, but Gemini
-processing is performed directly from the frontend. It does not call the
-Firebase Cloud Function for transcription or generation.
+This version is just a static website. It has no backend proxy, account system,
+database, or access gate. Gemini transcription and generation run
+directly from the browser with the API key entered by the user in Settings.
 
 ## Security Warning
 
-This version stores the Gemini API key in the user's browser `localStorage` and
-sends it directly from the website to the Gemini API.
+The Gemini API key is stored in the user's browser `localStorage` and sent
+directly from the page to Gemini.
 
 That key is not truly secret. Anyone with access to the browser profile, device
 storage, developer tools, or a compromised page/session may be able to read or
-misuse it. This clone trades the stronger security of the Cloud Function +
-Secret Manager design for simpler setup and faster iteration.
+misuse it. This version trades security for simplicity and speed.
 
 Do not commit a Gemini API key to this repository. Enter it only in the website
 Settings panel.
 
-## What Changed From The Secure Edition
+## Features
 
-- Added `browser-gemini.js`, derived from the previous Cloud Function prompt,
-  JSON schemas, model fallback order, Gemini 2.5 Flash settings, temperature
-  `0`, dynamic thinking budget `-1`, and frontend post-processing helpers.
-- Replaced the `generateVisitNoteHttp` Cloud Function call in `index.html` with
-  a direct frontend Gemini API call.
-- Added a Gemini API key field in Settings with save, remove, and show/hide
-  controls.
-- Stores the key only in local browser storage under
-  `doctor_woyz_browser_gemini_api_key`.
-- Updated `sw.js` so the new browser module is cached with the app shell.
-
-## Kept From The Current App
-
-- Ambient mode
+- Ambient visit note mode
 - Review dictation
 - Visit note dictation
 - Prescription generation
 - Medical certificate generation
 - Print and copy behavior
 - Doctor credentials stored locally for prescription/certificate output
-- Firebase Auth + Firestore device approval/admin files, available as an
-  optional gate
-
-Firebase approval is disabled by default in `index.html` with
-`REQUIRE_FIREBASE_DEVICE_APPROVAL = false`. Set it to `true` if you want to
-restore the approval gate. Gemini processing itself no longer depends on
-Firebase Cloud Functions or Secret Manager.
+- Browser-saved Gemini API key with save, remove, and show/hide controls
 
 ## Run Locally
 
@@ -65,23 +45,13 @@ http://127.0.0.1:8080/
 
 In Settings, paste a Gemini API key and select **Save Key** before recording.
 
-## Files To Publish On GitHub Pages
+## Files
 
-Publish the repository root as a static site. Required app files include:
+The whole app is intentionally only three files:
 
 ```text
 index.html
 browser-gemini.js
-main.html
-admin.html
-manifest.webmanifest
-sw.js
-offline.html
-icon-192.png
-icon-512.png
-icon-maskable-512.png
-firestore.rules
-firebase.json
 README.md
 ```
 
