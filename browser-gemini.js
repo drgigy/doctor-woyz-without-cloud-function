@@ -292,6 +292,13 @@ Accuracy rules:
 - Malayalam must exactly match the English instruction. If unsure, keep the
   Malayalam instruction short or leave it blank. Do not invent frequency or
   duration.
+- Use the same frequency in Malayalam as the English line:
+  BID/twice daily -> ദിവസം രണ്ട് പ്രാവശ്യം.
+  once daily -> ദിവസം ഒരു പ്രാവശ്യം.
+  at night -> രാത്രി.
+  before food -> ഭക്ഷണത്തിന് മുമ്പ്.
+  after food -> ഭക്ഷണത്തിന് ശേഷം.
+  IV -> IV ആയി.
 - If the doctor says SOS, as needed, when required, or as and when required,
   write exactly: "Take 1 tablet SOS/as needed." The Malayalam line should mean
   only: take one tablet only when needed. Never convert SOS/as-needed into a
@@ -372,6 +379,13 @@ Rules:
 - Malayalam must exactly match the English instruction.
 - If unsure, keep the Malayalam instruction short or leave it blank. Do not
   invent frequency or duration.
+- Use the same frequency in Malayalam as the English line:
+  BID/twice daily -> ദിവസം രണ്ട് പ്രാവശ്യം.
+  once daily -> ദിവസം ഒരു പ്രാവശ്യം.
+  at night -> രാത്രി.
+  before food -> ഭക്ഷണത്തിന് മുമ്പ്.
+  after food -> ഭക്ഷണത്തിന് ശേഷം.
+  IV -> IV ആയി.
 - If the doctor says SOS, as needed, when required, or as and when required,
   write exactly: Take 1 tablet SOS/as needed.
 - The Malayalam line should mean only: take one tablet only when needed.
@@ -571,6 +585,51 @@ function formatTreatmentPlan(text) {
   return formatMedicationLikeText(text);
 }
 
+const PRESCRIPTION_LINE_PATTERN = /^(?:\d+[\.)]\s*)?(?:tablet|tab|capsule|cap|syrup|inj(?:ection)?|drops?|ointment|cream|gel|spray|solution)\b/i;
+
+function isNilText(value) {
+  return !value || value.trim().toUpperCase() === "NIL";
+}
+
+function normalizePrescriptionMedicineLine(line) {
+  return line
+    .trim()
+    .replace(/^\d+[\.)]\s*/, "")
+    .replace(/^[-•]\s*/, "")
+    .replace(/\bTab\b\.?/i, "Tablet")
+    .replace(/\bCapsule\b/i, "Cap")
+    .replace(/\bInjection\b/i, "Inj")
+    .replace(/\.$/, "")
+    .trim();
+}
+
+function prescriptionFallbackFromLines(lines) {
+  return lines
+    .map(normalizePrescriptionMedicineLine)
+    .filter(Boolean)
+    .map((line, index) => `${index + 1}. ${line}`)
+    .join("\n");
+}
+
+function movePrescriptionOutOfTreatmentPlan(report) {
+  if (isNilText(report.treatmentPlan)) return report;
+  const lines = report.treatmentPlan
+    .split(/\n+/)
+    .map(line => line.trim())
+    .filter(Boolean);
+  const prescriptionLines = lines.filter(line => PRESCRIPTION_LINE_PATTERN.test(line));
+  if (!prescriptionLines.length) return report;
+
+  const treatmentLines = lines.filter(line => !PRESCRIPTION_LINE_PATTERN.test(line));
+  const existingPrescription = isNilText(report.prescription) ? "" : report.prescription.trim();
+  const movedPrescription = prescriptionFallbackFromLines(prescriptionLines);
+  return {
+    ...report,
+    treatmentPlan: treatmentLines.length ? treatmentLines.join("\n") : "NIL",
+    prescription: [existingPrescription, movedPrescription].filter(Boolean).join("\n")
+  };
+}
+
 function splitInvestigationFindings(line) {
   const trimmed = line.replace(/^[-•]\s*/, "").trim();
   if (!trimmed) return [];
@@ -657,7 +716,7 @@ function extractReport(payload) {
   report.reviewOfInvestigations = formatReviewOfInvestigations(normalizeBloodUnits(report.reviewOfInvestigations));
   report.currentMedication = formatCurrentMedication(report.currentMedication);
   report.treatmentPlan = formatTreatmentPlan(report.treatmentPlan);
-  return sanitizeTreatmentPlan(report);
+  return movePrescriptionOutOfTreatmentPlan(sanitizeTreatmentPlan(report));
 }
 
 function extractDictation(payload) {
