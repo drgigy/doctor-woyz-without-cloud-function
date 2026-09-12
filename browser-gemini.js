@@ -13,7 +13,8 @@ const REPORT_FIELDS = [
   "reviewOfInvestigations",
   "currentMedication",
   "provisionalDiagnosis",
-  "treatmentPlan"
+  "treatmentPlan",
+  "prescription"
 ];
 
 const REPORT_FIELD_DESCRIPTIONS = {
@@ -31,7 +32,8 @@ const REPORT_FIELD_DESCRIPTIONS = {
   reviewOfInvestigations: "Only investigation reports and values explicitly spoken, otherwise NIL.",
   currentMedication: "Only medicines described as already being taken, one numbered medicine per line, otherwise NIL.",
   provisionalDiagnosis: "Most likely working or provisional diagnosis clearly supported by the complete consultation, investigation review, or doctor assessment. It need not be introduced by the words provisional diagnosis. Do not guess from isolated symptoms, medications, or general medical knowledge. Use NIL when unsupported.",
-  treatmentPlan: "Plan, prescription, advice, orders, referral, follow-up, monitoring, reassurance, or conservative management clearly supported by the consultation. It need not be introduced by the words treatment plan. Never invent drug changes, doses, procedures, investigations, or follow-up, and never copy current medicines as new advice. Use NIL when unsupported."
+  treatmentPlan: "Plan, advice, orders, referral, follow-up, monitoring, reassurance, conservative management, investigations, or non-medicine instructions clearly supported by the consultation. It need not be introduced by the words treatment plan. Never invent drug changes, doses, procedures, investigations, or follow-up, and never copy current medicines as new advice. Use NIL when unsupported.",
+  prescription: "Only medicines explicitly prescribed, started, changed, stopped, dose-adjusted, or continued by the doctor in this encounter. Format as a plain text prescription: each medicine as a numbered entry, medicine name/dose on the first line, English patient instruction on the next line, Malayalam matching instruction on the next line. Put non-medicine advice under Advice / Instructions. Use NIL when no prescribed medicine or prescription advice is supported."
 };
 
 const REPORT_SCHEMA = {
@@ -119,6 +121,7 @@ function buildVisitNotePrompt(mode = "ambient") {
 - allergies: Allergies.
 - currentMedication: Current Medications.
 - treatmentPlan: Orders.
+- prescription: Prescription.
 - Use NIL for pastMedicalHistory, familyHistory, and personalHistory unless the
   doctor explicitly dictates them.`
     : "";
@@ -218,10 +221,11 @@ Accuracy rules:
   investigation review, doctor's assessment, or explicitly discussed clinical
   problem. The doctor does not need to say the words "provisional diagnosis".
   If the diagnosis remains uncertain or unsupported, use "NIL".
-- Fill treatmentPlan with the plan, prescription, advice, orders, referral,
+- Fill treatmentPlan with non-medicine plan, advice, orders, referral,
   follow-up, monitoring, reassurance, or conservative management when it is
-  clearly supported by the consultation or doctor's discussion. The doctor
-  does not need to say the words "treatment plan".
+  clearly supported by the consultation or doctor's discussion. Put prescribed
+  medicines in prescription, not treatmentPlan. The doctor does not need to say
+  the words "treatment plan".
 - Do not move current medications into treatmentPlan. Do not convert old or
   current medicines into new advice. If the doctor only lists current medicines
   and no future action, medication change, review, reassurance, or management
@@ -240,7 +244,8 @@ Accuracy rules:
   - Finding 1.
   - Finding 2.
 - Use only these numbers inside reviewOfInvestigations. Do not number the main
-  visit-note sections when copying or composing other fields.
+  visit-note sections when copying or composing other fields, except for the
+  required medicine and advice numbering inside prescription.
 - For blood reports, use the heading "Blood Reports" with the date if
   dictated, and give it its own number. Include dictated blood values as
   separate bullets, strictly one value per line.
@@ -257,14 +262,57 @@ Accuracy rules:
   reviewOfInvestigations. Include only investigation values and report findings
   that were actually dictated.
 - Put medicines already being taken in currentMedication. Put newly prescribed
-  medicines in treatmentPlan.
+  medicines in prescription. Put non-medicine plans, investigations, review,
+  precautions, and advice in treatmentPlan.
 - In currentMedication, write each medication on a separate numbered line:
   1. Medicine name dose frequency/timing
   2. Medicine name dose frequency/timing
   Keep the medicine, dose, frequency, and timing on the same line. Do not write
   current medicines in a single paragraph.
-- In treatmentPlan or orders, write each medication/advice item on a separate
+- In treatmentPlan or orders, write each non-medicine advice item on a separate
   line when multiple items are dictated.
+- Fill prescription only with medicines that the doctor explicitly prescribes,
+  starts, changes, stops, dose-adjusts, or continues. Do not include medicines
+  merely mentioned as history, current medicines, or medicines advised by
+  another doctor.
+- In prescription, correct spelling and grammar and obvious medical spelling
+  errors, but do not add, infer, assume, remove, or hallucinate any medicine or
+  instruction.
+- Format every prescribed medicine in prescription exactly like this:
+  1. Tablet/Cap/Syrup/Inj brand name dose
+     Clear English patient instruction without repeating the medicine name.
+     Malayalam patient instruction without repeating the medicine name.
+- Always write tablet medicines as "Tablet", not "Tab". Preserve dictated
+  brand name, dose, route, frequency, food timing, SOS/as-needed instruction,
+  and duration exactly. Keep medicine names and doses in English in the
+  numbered medicine line.
+- The English and Malayalam instruction lines must not repeat the medicine
+  name. Do not write the word "Malayalam" before the Malayalam text. Put the
+  Malayalam instruction directly below the English instruction.
+- Malayalam must exactly match the English instruction. If unsure, keep the
+  Malayalam instruction short or leave it blank. Do not invent frequency or
+  duration.
+- If the doctor says SOS, as needed, when required, or as and when required,
+  write exactly: "Take 1 tablet SOS/as needed." The Malayalam line should mean
+  only: take one tablet only when needed. Never convert SOS/as-needed into a
+  fixed schedule.
+- Write duration in numeric form only, for example 1 month, 10 days, 2 weeks.
+  When a specific clock time is dictated, keep it. If only "evening" is
+  dictated without a clock time, write it as night. Do not use labels like
+  morning:, noon:, night:, bedtime:, Duration:, or Instructions:.
+- In Malayalam patient instruction lines, spell general counts and durations
+  in Malayalam words when possible, for example ഒരു ഗുളിക, പത്ത് ദിവസം,
+  ഇരുപത് ദിവസം, ഒരു മാസം, രണ്ട് ആഴ്ച.
+- For tapering or step-down prescriptions, create one numbered medicine entry
+  for each step. Write the same medicine name once in each numbered medicine
+  line. Write the phase clearly in the English instruction below it and put the
+  Malayalam version directly below it.
+- If advice, investigations, review plans, certificates, precautions, or
+  non-medicine instructions are dictated as part of the prescription, place
+  them after the medicines under:
+  Advice / Instructions:
+  1. ...
+  2. ...
 - Use "NIL" for every section that was not mentioned.
 - Use polished clinical prose without adding information.
 ${visitFields}
@@ -292,21 +340,65 @@ Rules:
 
 function buildPrescriptionPrompt() {
   return `
-You are an expert medical prescription transcription assistant. Convert the
-recorded Malayalam, English, or Kerala Manglish prescription dictation into
-professional clinical English.
+You are a clinical prescription assistant helping a doctor structure a dictated
+prescription.
+
+Correct spelling and grammar. Correct obvious medical spelling errors.
+Do not add, infer, assume, or hallucinate medicines or instructions.
+Do not remove any dictated medicine or instruction.
+
+Return a single plain text prescription only.
+Do not return JSON.
+Do not use markdown fences.
 
 Rules:
-- Return only the requested JSON object.
-- Fill date only if dictated. If not dictated, use today's date.
-- Fill patientName, patientAge, patientSex, and patientUhid only when each is
-  explicitly dictated. Otherwise use "NIL".
-- Put all medications, advice, investigations, and follow-up instructions in
-  medicationsAdvised.
-- Write each medication or advice item on a separate numbered line: 1, 2, 3.
-- Preserve drug names, doses, timings, durations, and instructions exactly as
-  dictated.
-- Never invent, infer, recommend, or add information that was not spoken.
+- Include only medicines that the doctor explicitly prescribes, starts,
+  changes, stops, dose-adjusts, or continues.
+- Do not include medicines merely mentioned as history, current medicines, or
+  medicines advised by another doctor.
+- Format every prescribed medicine as a numbered list, one medicine entry at a
+  time:
+  1. Tablet/Cap/Syrup/Inj brand name dose
+     Clear English patient instruction without repeating the medicine name.
+     Malayalam patient instruction without repeating the medicine name.
+- Always write tablet medicines as "Tablet", not "Tab".
+- Preserve the dictated brand name, dose, route, frequency, food timing,
+  SOS/as-needed instruction, and duration exactly.
+- Keep medicine names and doses in English in the numbered medicine line.
+- The English instruction must not repeat the medicine name.
+- The Malayalam instruction must not repeat the medicine name.
+- Do not write the word "Malayalam" before the Malayalam text.
+- Put the Malayalam instruction directly below the English instruction.
+- Malayalam must exactly match the English instruction.
+- If unsure, keep the Malayalam instruction short or leave it blank. Do not
+  invent frequency or duration.
+- If the doctor says SOS, as needed, when required, or as and when required,
+  write exactly: Take 1 tablet SOS/as needed.
+- The Malayalam line should mean only: take one tablet only when needed.
+- Never convert SOS/as-needed into daily, twice daily, morning, night, or a
+  fixed schedule.
+- Write duration in numeric form only, for example 1 month, 10 days, 2 weeks.
+- Do not write vague phrases like "one more month" or "more".
+- When a specific clock time is dictated, keep it, for example: Take 1 tablet
+  at 7 AM before food.
+- If only "evening" is dictated without a clock time, write it as night.
+- Do not use internal labels like morning:, noon:, night:, bedtime:,
+  Duration:, or Instructions:.
+- In Malayalam patient instruction lines, spell general counts and durations
+  in Malayalam words when possible: ഒരു ഗുളിക, പത്ത് ദിവസം, ഇരുപത് ദിവസം,
+  ഒരു മാസം, രണ്ട് ആഴ്ച.
+- Keep drug names and doses in English/numerals inside Malayalam instruction
+  lines only if they are needed for clarity.
+- For tapering or step-down prescriptions, create one numbered medicine entry
+  for each step.
+- Write the same medicine name once in each numbered medicine line.
+- Write the phase clearly in the English instruction below it.
+- Put the Malayalam version directly below each English tapering instruction.
+- If advice, investigations, review plans, certificates, precautions, or
+  non-medicine instructions are dictated, place them after the medicines under:
+  Advice / Instructions:
+  1. ...
+  2. ...
 `.trim();
 }
 
@@ -344,7 +436,7 @@ function buildTaskPrompt(mode) {
     return "Transcribe this recording faithfully into the requested JSON. Correct only grammar, spelling, and punctuation. Do not add, remove, or infer clinical content.";
   }
   if (mode === "prescription") {
-    return "Extract only the clearly dictated prescription details into the requested JSON. Preserve every drug name, dose, frequency, duration, and instruction exactly.";
+    return "Create the plain text prescription only from the clearly dictated prescription. Preserve every drug name, dose, frequency, duration, and instruction exactly.";
   }
   if (mode === "medicalCertificate") {
     return "Convert only the clearly dictated facts into the requested medical-certificate JSON. Correct grammar and spelling without adding, removing, or inferring facts.";
@@ -363,6 +455,15 @@ function extractJson(payload) {
   if (!text) throw new Error("The AI returned an empty response.");
 
   return JSON.parse(text);
+}
+
+function extractPlainText(payload) {
+  const text = payload.candidates?.[0]?.content?.parts
+    ?.map(part => part.text || "")
+    .join("")
+    .trim();
+  if (!text) throw new Error("The AI returned an empty response.");
+  return text.replace(/^```(?:text)?\s*/i, "").replace(/\s*```$/i, "").trim();
 }
 
 function normalizeBloodUnits(text) {
@@ -568,25 +669,19 @@ function extractDictation(payload) {
 }
 
 function extractPrescription(payload) {
-  const parsed = extractJson(payload);
-  const prescription = Object.fromEntries(
-    PRESCRIPTION_FIELDS.map(field => [
-      field,
-      typeof parsed[field] === "string" && parsed[field].trim()
-        ? parsed[field].trim()
-        : "NIL"
-    ])
-  );
-  prescription.medicationsAdvised = numberPrescriptionItems(prescription.medicationsAdvised);
-  if (!prescription.date || prescription.date === "NIL") {
-    prescription.date = new Date().toLocaleDateString("en-IN", {
+  return {
+    date: new Date().toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "long",
       year: "numeric",
       timeZone: "Asia/Kolkata"
-    });
-  }
-  return prescription;
+    }),
+    patientName: "NIL",
+    patientAge: "NIL",
+    patientSex: "NIL",
+    patientUhid: "NIL",
+    medicationsAdvised: extractPlainText(payload)
+  };
 }
 
 function extractMedicalCertificate(payload) {
@@ -629,6 +724,16 @@ async function callGemini({ apiKey, model, audioBase64, mimeType, mode }) {
       ? buildDictationPrompt()
       : buildVisitNotePrompt(mode);
   const taskPrompt = buildTaskPrompt(mode);
+  const generationConfig = {
+    temperature: 0,
+    thinkingConfig: {
+      thinkingBudget: -1
+    }
+  };
+  if (!prescriptionMode) {
+    generationConfig.responseMimeType = "application/json";
+    generationConfig.responseSchema = schema;
+  }
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
     {
@@ -657,14 +762,7 @@ async function callGemini({ apiKey, model, audioBase64, mimeType, mode }) {
             }
           ]
         }],
-        generationConfig: {
-          temperature: 0,
-          thinkingConfig: {
-            thinkingBudget: -1
-          },
-          responseMimeType: "application/json",
-          responseSchema: schema
-        }
+        generationConfig
       })
     }
   );

@@ -1256,6 +1256,10 @@
             <h3>11. Treatment Plan</h3>
             <textarea id="treatmentPlan">Awaiting generated treatment plan.</textarea>
           </div>
+          <div class="section full">
+            <h3>12. Prescription</h3>
+            <textarea id="prescription">NIL</textarea>
+          </div>
         </div>
         <div class="dictation-result" id="dictationResult">
           <div class="section full">
@@ -1850,14 +1854,16 @@
             historyOfPresentIllness: "History of Present Illness",
             examinationFindings: "Physical Examination",
             provisionalDiagnosis: "Diagnosis",
-            treatmentPlan: "Orders"
+            treatmentPlan: "Orders",
+            prescription: "Prescription"
           }
         : {
             presentingComplaint: "1. Presenting Complaint",
             historyOfPresentIllness: "2. History of Present Illness",
             examinationFindings: "7. Examination Findings",
             provisionalDiagnosis: "10. Provisional Diagnosis",
-            treatmentPlan: "11. Treatment Plan"
+            treatmentPlan: "11. Treatment Plan",
+            prescription: "12. Prescription"
           };
       Object.entries(labels).forEach(([id, label]) => {
         const heading = document.getElementById(id).closest(".section").querySelector("h3");
@@ -1881,6 +1887,7 @@
       document.getElementById("currentMedication").value = data.currentMedication || "NIL";
       document.getElementById("provisionalDiagnosis").value = data.provisionalDiagnosis || "NIL";
       document.getElementById("treatmentPlan").value = data.treatmentPlan || "NIL";
+      document.getElementById("prescription").value = data.prescription || "NIL";
     }
 
     function resetScribe() {
@@ -2013,7 +2020,8 @@
       ["Review of Investigations", "reviewOfInvestigations"],
       ["Current Medication", "currentMedication"],
       ["Provisional Diagnosis", "provisionalDiagnosis"],
-      ["Treatment Plan", "treatmentPlan"]
+      ["Treatment Plan", "treatmentPlan"],
+      ["Prescription", "prescription"]
     ];
 
     const visitDictationFields = [
@@ -2028,7 +2036,8 @@
       ["Review of Investigations", "reviewOfInvestigations"],
       ["Allergies", "allergies"],
       ["Current Medications", "currentMedication"],
-      ["Orders", "treatmentPlan"]
+      ["Orders", "treatmentPlan"],
+      ["Prescription", "prescription"]
     ];
 
     const prescriptionFields = [
@@ -2077,6 +2086,7 @@
 
     function numberPrescriptionText(text) {
       if (!text || text.trim().toUpperCase() === "NIL") return "NIL";
+      if (/^\s*\d+[\.)]\s+/m.test(text)) return text.trim();
       return text
         .replace(/([a-z)])(\d+[\.)])(?=\s*[A-Z])/g, "$1\n$2")
         .split(/\n+/)
