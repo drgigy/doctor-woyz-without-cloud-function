@@ -1382,6 +1382,30 @@
   <script type="module">
     import { processWithBrowserGemini } from "./browser-gemini.js";
 
+    const APP_VERSION = "2026-09-12-prescription-box-v6";
+
+    async function clearLegacyAppCache() {
+      try {
+        if ("serviceWorker" in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map(registration => registration.unregister()));
+        }
+        if ("caches" in window) {
+          const names = await caches.keys();
+          await Promise.all(names.map(name => caches.delete(name)));
+        }
+        const seenVersion = localStorage.getItem("doctor_woyz_without_cloud_function_version");
+        if (seenVersion !== APP_VERSION) {
+          localStorage.setItem("doctor_woyz_without_cloud_function_version", APP_VERSION);
+          if (navigator.serviceWorker?.controller) window.location.reload();
+        }
+      } catch (error) {
+        console.warn("Legacy cache cleanup skipped:", error);
+      }
+    }
+
+    clearLegacyAppCache();
+
     const state = {
       mediaRecorder: null,
       stream: null,
