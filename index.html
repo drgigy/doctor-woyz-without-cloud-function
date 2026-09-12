@@ -1256,7 +1256,7 @@
             <h3>11. Treatment Plan</h3>
             <textarea id="treatmentPlan">Awaiting generated treatment plan.</textarea>
           </div>
-          <div class="section full">
+          <div class="section full prescription-section">
             <h3>12. Prescription</h3>
             <textarea id="prescription">NIL</textarea>
           </div>
@@ -1847,7 +1847,23 @@
       scheduleTextareaResize();
     }
 
+    function ensurePrescriptionSection() {
+      if (document.getElementById("prescription")) return;
+      const treatmentPlan = document.getElementById("treatmentPlan");
+      const treatmentSection = treatmentPlan?.closest(".section");
+      if (!treatmentSection) return;
+      const section = document.createElement("div");
+      section.className = "section full prescription-section";
+      section.innerHTML = `
+        <h3>12. Prescription</h3>
+        <textarea id="prescription">NIL</textarea>
+      `;
+      treatmentSection.insertAdjacentElement("afterend", section);
+      section.querySelector("textarea").addEventListener("input", event => resizeTextarea(event.currentTarget));
+    }
+
     function applyVisitLabels(mode) {
+      ensurePrescriptionSection();
       const labels = mode === "visitDictation"
         ? {
             presentingComplaint: "Chief Complaints",
@@ -1872,6 +1888,7 @@
     }
 
     function fillReport(data) {
+      ensurePrescriptionSection();
       document.getElementById("patientName").value = data.patientName || "NIL";
       document.getElementById("patientAge").value = data.patientAge || "NIL";
       document.getElementById("patientSex").value = data.patientSex || "NIL";
@@ -1888,6 +1905,7 @@
       document.getElementById("provisionalDiagnosis").value = data.provisionalDiagnosis || "NIL";
       document.getElementById("treatmentPlan").value = data.treatmentPlan || "NIL";
       document.getElementById("prescription").value = data.prescription || "NIL";
+      scheduleTextareaResize();
     }
 
     function resetScribe() {
