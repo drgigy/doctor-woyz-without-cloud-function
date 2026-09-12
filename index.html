@@ -2152,10 +2152,15 @@
       return state.resultMode === "visitDictation" ? visitDictationFields : caseFields;
     }
 
+    const mandatoryVisitFieldIds = new Set(["prescription"]);
+
     function collectFields(fields, omitNil = false) {
       return fields
         .map(([title, id]) => [title, document.getElementById(id).value.trim()])
-        .filter(([, value]) => !omitNil || (value && value.toUpperCase() !== "NIL"))
+        .filter(([, value], index) => {
+          const id = fields[index][1];
+          return mandatoryVisitFieldIds.has(id) || !omitNil || (value && value.toUpperCase() !== "NIL");
+        })
         .map(([title, value]) => `${title}\n${value || "NIL"}`)
         .join("\n\n");
     }
@@ -2315,9 +2320,13 @@
     }
 
     function printVisitNote() {
-      const sections = activeVisitFields()
+      const fields = activeVisitFields();
+      const sections = fields
         .map(([title, id]) => [title, document.getElementById(id).value.trim()])
-        .filter(([, value]) => value && value.toUpperCase() !== "NIL");
+        .filter(([, value], index) => {
+          const id = fields[index][1];
+          return mandatoryVisitFieldIds.has(id) || (value && value.toUpperCase() !== "NIL");
+        });
       printDocument({ title: state.resultMode === "visitDictation" ? "Visit Note" : "Ambient Visit Note", sections });
     }
 
