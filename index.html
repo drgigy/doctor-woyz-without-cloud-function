@@ -813,8 +813,17 @@
       background: #eff6ff;
     }
 
+    .section.prescription-section {
+      border-color: #bbf7d0;
+      background: #f0fdf4;
+    }
+
     .dark .section.diagnosis {
       background: #0b1f45;
+    }
+
+    .dark .section.prescription-section {
+      background: #06281a;
     }
 
     .section h3 {
@@ -828,6 +837,10 @@
 
     .section.diagnosis h3 {
       color: var(--blue);
+    }
+
+    .section.prescription-section h3 {
+      color: #16a34a;
     }
 
     .section textarea {
@@ -1848,18 +1861,26 @@
     }
 
     function ensurePrescriptionSection() {
-      if (document.getElementById("prescription")) return;
       const treatmentPlan = document.getElementById("treatmentPlan");
       const treatmentSection = treatmentPlan?.closest(".section");
       if (!treatmentSection) return;
-      const section = document.createElement("div");
+      const existingTextarea = document.getElementById("prescription");
+      const existingSection = existingTextarea?.closest(".section");
+      const section = existingSection || document.createElement("div");
       section.className = "section full prescription-section";
-      section.innerHTML = `
-        <h3>12. Prescription</h3>
-        <textarea id="prescription">NIL</textarea>
-      `;
+      if (!existingTextarea) {
+        section.innerHTML = `
+          <h3>12. Prescription</h3>
+          <textarea id="prescription">NIL</textarea>
+        `;
+      }
       treatmentSection.insertAdjacentElement("afterend", section);
-      section.querySelector("textarea").addEventListener("input", event => resizeTextarea(event.currentTarget));
+      const textarea = section.querySelector("textarea");
+      if (!textarea.dataset.resizeBound) {
+        textarea.addEventListener("input", event => resizeTextarea(event.currentTarget));
+        textarea.dataset.resizeBound = "true";
+      }
+      return textarea;
     }
 
     function applyVisitLabels(mode) {
@@ -1887,7 +1908,44 @@
       });
     }
 
+    const prescriptionLinePattern = /^(?:\d+[\.)]\s*)?(?:tablet|tab|capsule|cap|syrup|inj(?:ection)?|drops?|ointment|cream|gel|spray|solution)\b/i;
+
+    function normalizePrescriptionLine(line) {
+      return line
+        .trim()
+        .replace(/^\d+[\.)]\s*/, "")
+        .replace(/^[-•]\s*/, "")
+        .replace(/\bTab\b\.?/i, "Tablet")
+        .replace(/\bCapsule\b/i, "Cap")
+        .replace(/\bInjection\b/i, "Inj")
+        .replace(/\.$/, "")
+        .trim();
+    }
+
+    function splitPrescriptionFromTreatmentPlan(data = {}) {
+      const treatmentPlan = data.treatmentPlan || "NIL";
+      if (!treatmentPlan || treatmentPlan.toUpperCase() === "NIL") return data;
+      const lines = treatmentPlan.split(/\n+/).map(line => line.trim()).filter(Boolean);
+      const prescriptionLines = lines.filter(line => prescriptionLinePattern.test(line));
+      if (!prescriptionLines.length) return data;
+      const treatmentLines = lines.filter(line => !prescriptionLinePattern.test(line));
+      const movedPrescription = prescriptionLines
+        .map(normalizePrescriptionLine)
+        .filter(Boolean)
+        .map((line, index) => `${index + 1}. ${line}`)
+        .join("\n");
+      const existingPrescription = data.prescription && data.prescription.toUpperCase() !== "NIL"
+        ? data.prescription.trim()
+        : "";
+      return {
+        ...data,
+        treatmentPlan: treatmentLines.length ? treatmentLines.join("\n") : "NIL",
+        prescription: [existingPrescription, movedPrescription].filter(Boolean).join("\n") || "NIL"
+      };
+    }
+
     function fillReport(data) {
+      data = splitPrescriptionFromTreatmentPlan(data);
       ensurePrescriptionSection();
       document.getElementById("patientName").value = data.patientName || "NIL";
       document.getElementById("patientAge").value = data.patientAge || "NIL";
@@ -2353,6 +2411,7 @@
     document.getElementById("newButton").addEventListener("click", resetScribe);
     localStorage.removeItem("doctor_woyz_api_key");
     localStorage.removeItem("opd_demo_ai_model_v2");
+    ensurePrescriptionSection();
     document.querySelectorAll(".section textarea").forEach(textarea => {
       textarea.addEventListener("input", () => resizeTextarea(textarea));
     });
