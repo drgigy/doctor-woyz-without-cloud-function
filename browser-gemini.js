@@ -33,7 +33,7 @@ const REPORT_FIELD_DESCRIPTIONS = {
   currentMedication: "Only medicines described as already being taken, one numbered medicine per line, otherwise NIL.",
   provisionalDiagnosis: "Most likely working or provisional diagnosis clearly supported by the complete consultation, investigation review, or doctor assessment. It need not be introduced by the words provisional diagnosis. Do not guess from isolated symptoms, medications, or general medical knowledge. Use NIL when unsupported.",
   treatmentPlan: "Plan, advice, orders, referral, follow-up, monitoring, reassurance, conservative management, investigations, or non-medicine instructions clearly supported by the consultation. It need not be introduced by the words treatment plan. Never invent drug changes, doses, procedures, investigations, or follow-up, and never copy current medicines as new advice. Use NIL when unsupported.",
-  prescription: "During ambient or visit-note transcription, fill this field whenever the doctor dictates prescribed medicines in the same recording. Include only medicines explicitly prescribed, started, changed, stopped, dose-adjusted, or continued by the doctor in this encounter. Format as a plain text prescription: each medicine as a numbered entry, medicine name/dose on the first line, English patient instruction on the next line, Malayalam matching instruction on the next line. Put non-medicine prescription advice under Advice / Instructions. Use NIL only when no prescribed medicine or prescription advice is supported."
+  prescription: "During ambient or visit-note transcription, fill this field whenever the doctor dictates prescribed medicines in the same recording, especially when the doctor says prescription, Rx, write, prescribe, start, continue, stop, increase, decrease, reduce, take, give, add, advise, or advised. Include only medicines explicitly prescribed, started, changed, stopped, dose-adjusted, or continued by the doctor in this encounter. Format as a plain text prescription: each medicine as a numbered entry, medicine name/dose on the first line, English patient instruction on the next line, Malayalam matching instruction on the next line. Put non-medicine prescription advice under Advice / Instructions. Use NIL only when no prescribed medicine or prescription advice is supported."
 };
 
 const REPORT_SCHEMA = {
@@ -264,6 +264,22 @@ Accuracy rules:
 - Put medicines already being taken in currentMedication. Put newly prescribed
   medicines in prescription. Put non-medicine plans, investigations, review,
   precautions, and advice in treatmentPlan.
+- Prescription extraction is mandatory in ambient and visit-note modes. If the
+  doctor says "prescription", "Rx", "write", "prescribe", "start",
+  "continue", "stop", "increase", "decrease", "reduce", "take", "give",
+  "add", "advise", or "advised" near a medicine name, treat that medicine as
+  an encounter prescription and put it in prescription, even if the dedicated
+  Prescription dictation mode was not selected.
+- When the doctor explicitly says "prescription" during ambient listening or
+  visit-note dictation, do not ignore the following medicine lines. Put all
+  medicine names, doses, frequencies, food timing, SOS instructions, routes,
+  and durations spoken after that cue into prescription until the doctor moves
+  to a non-prescription topic.
+- Never put prescribed medicines in treatmentPlan. If a sentence contains a
+  medicine formulation such as Tablet, Tab, Cap, Capsule, Syrup, Inj,
+  Injection, drops, ointment, cream, gel, spray, or solution and it is being
+  newly advised/continued/changed/stopped in this encounter, it belongs in
+  prescription.
 - In currentMedication, write each medication on a separate numbered line:
   1. Medicine name dose frequency/timing
   2. Medicine name dose frequency/timing
@@ -456,9 +472,9 @@ function buildTaskPrompt(mode) {
     return "Convert only the clearly dictated facts into the requested medical-certificate JSON. Correct grammar and spelling without adding, removing, or inferring facts.";
   }
   if (mode === "visitDictation") {
-    return "Organize only the clearly dictated clinical information into the requested visit-note JSON. If medicines are prescribed in the same dictation, put them in the prescription field as a separate prescription box and keep them out of treatmentPlan. Use NIL for every unsupported field.";
+    return "Organize only the clearly dictated clinical information into the requested visit-note JSON. Actively listen for any prescription cue such as prescription, Rx, write, prescribe, start, continue, stop, increase, decrease, reduce, take, give, add, advise, or advised. If medicines are prescribed anywhere in the same dictation, put them in the prescription field as a separate prescription box and keep them out of treatmentPlan. Use NIL for every unsupported field.";
   }
-  return "Review the complete doctor-patient recording, cross-reference all clearly supported clinical details, and produce a mutually consistent structured visit note. If medicines are prescribed in the same recording, put them in the prescription field as a separate prescription box and keep them out of treatmentPlan. Never infer missing details. Use NIL for every unsupported field.";
+  return "Review the complete doctor-patient recording, cross-reference all clearly supported clinical details, and produce a mutually consistent structured visit note. Actively listen for any prescription cue such as prescription, Rx, write, prescribe, start, continue, stop, increase, decrease, reduce, take, give, add, advise, or advised. If medicines are prescribed anywhere in the same recording, put them in the prescription field as a separate prescription box and keep them out of treatmentPlan. Never infer missing details. Use NIL for every unsupported field.";
 }
 
 function extractJson(payload) {
@@ -585,7 +601,7 @@ function formatTreatmentPlan(text) {
   return formatMedicationLikeText(text);
 }
 
-const PRESCRIPTION_LINE_PATTERN = /^(?:\d+[\.)]\s*)?(?:tablet|tab|capsule|cap|syrup|inj(?:ection)?|drops?|ointment|cream|gel|spray|solution)\b/i;
+const PRESCRIPTION_LINE_PATTERN = /^(?:\d+[\.)]\s*)?(?:start|continue|stop|increase|decrease|reduce|take|give|add|advise|advised|prescribe|prescribed|write|rx|prescription)?\s*(?:tablet|tab|capsule|cap|syrup|inj(?:ection)?|drops?|ointment|cream|gel|spray|solution)\b/i;
 
 function isNilText(value) {
   return !value || value.trim().toUpperCase() === "NIL";
