@@ -415,6 +415,13 @@
       gap: 12px;
     }
 
+    .mode-buttons {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
     .mode-toggle {
       border: 1px solid #bfdbfe;
       border-radius: 999px;
@@ -1162,7 +1169,10 @@
         </div>
 
         <div class="mode-panel">
-          <button class="mode-toggle" id="dictationModeToggle" type="button">Dictation Mode</button>
+          <div class="mode-buttons">
+            <button class="mode-toggle active" id="ambientModeToggle" type="button">Ambient Mode</button>
+            <button class="mode-toggle" id="dictationModeToggle" type="button">Dictation Mode</button>
+          </div>
           <div class="dictation-options" id="dictationOptions">
             <button class="mode-option active" data-dictation-mode="reviewDictation" type="button">Review Dictation</button>
             <button class="mode-option" data-dictation-mode="visitDictation" type="button">Visit Note</button>
@@ -1497,6 +1507,7 @@
 
     function updateModeUi() {
       const dictationActive = state.inputMode === "dictation";
+      document.getElementById("ambientModeToggle").classList.toggle("active", !dictationActive);
       document.getElementById("dictationModeToggle").classList.toggle("active", dictationActive);
       document.getElementById("dictationOptions").classList.toggle("visible", dictationActive);
       document.querySelectorAll("[data-dictation-mode]").forEach(button => {
@@ -2024,6 +2035,12 @@
 
     window.addEventListener("beforeunload", () => {
       if (state.stream) state.stream.getTracks().forEach(track => track.stop());
+    });
+
+    document.getElementById("ambientModeToggle").addEventListener("click", () => {
+      state.inputMode = "ambient";
+      updateModeUi();
+      focusKeyboardShortcuts();
     });
 
     document.getElementById("dictationModeToggle").addEventListener("click", () => {
