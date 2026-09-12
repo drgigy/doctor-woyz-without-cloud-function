@@ -1390,7 +1390,7 @@
   <script type="module">
     import { processWithBrowserGemini } from "./browser-gemini.js";
 
-    const APP_VERSION = "2026-09-12-mode-toggle-cache-reset-v7";
+    const APP_VERSION = "2026-09-12-ambient-prescription-result-v8";
 
     async function clearLegacyAppCache() {
       try {
@@ -1824,17 +1824,19 @@
 
     function showVisitNoteResult(report, mode = "ambient") {
       state.resultMode = mode;
+      const normalizedReport = splitPrescriptionFromTreatmentPlan(report || {});
       document.getElementById("resultHeading").textContent = mode === "visitDictation" ? "Visit Note" : "Ambient Visit Note";
       document.getElementById("visitNoteActions").style.display = "";
       document.getElementById("dictationActions").style.display = "none";
-      document.getElementById("prescriptionActions").style.display = "none";
+      document.getElementById("prescriptionActions").style.display = "";
       document.getElementById("certificateActions").style.display = "none";
       document.getElementById("visitNoteResult").style.display = "";
       document.getElementById("dictationResult").classList.remove("visible");
-      document.getElementById("prescriptionResult").classList.remove("visible");
+      document.getElementById("prescriptionResult").classList.add("visible");
       document.getElementById("certificateResult").classList.remove("visible");
       applyVisitLabels(mode);
-      fillReport(report);
+      fillReport(normalizedReport);
+      fillPrescriptionCardFromVisit(normalizedReport);
     }
 
     function showDictationResult(text) {
@@ -1871,6 +1873,16 @@
       document.getElementById("prescriptionMedications").value = numberPrescriptionText(data.medicationsAdvised || "NIL");
       document.getElementById("prescriptionCredentials").value = getDoctorCredentials();
       scheduleTextareaResize();
+    }
+
+    function fillPrescriptionCardFromVisit(data = {}) {
+      document.getElementById("prescriptionDate").value = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
+      document.getElementById("prescriptionName").value = data.patientName || "NIL";
+      document.getElementById("prescriptionAge").value = data.patientAge || "NIL";
+      document.getElementById("prescriptionSex").value = data.patientSex || "NIL";
+      document.getElementById("prescriptionUhid").value = data.patientUhid || "NIL";
+      document.getElementById("prescriptionMedications").value = numberPrescriptionText(data.prescription || "NIL");
+      document.getElementById("prescriptionCredentials").value = getDoctorCredentials();
     }
 
     function showMedicalCertificateResult(data = {}) {
@@ -1942,7 +1954,7 @@
       });
     }
 
-    const prescriptionLinePattern = /^(?:\d+[\.)]\s*)?(?:tablet|tab|capsule|cap|syrup|inj(?:ection)?|drops?|ointment|cream|gel|spray|solution)\b/i;
+    const prescriptionLinePattern = /^(?:\d+[\.)]\s*)?(?:start|continue|stop|increase|decrease|reduce|take|give|add|advise|advised|prescribe|prescribed)?\s*(?:tablet|tab|capsule|cap|syrup|inj(?:ection)?|drops?|ointment|cream|gel|spray|solution)\b/i;
 
     function normalizePrescriptionLine(line) {
       return line
