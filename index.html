@@ -423,20 +423,23 @@
     }
 
     .mode-toggle {
-      border: 1px solid #bfdbfe;
+      border: 2px solid #fb7185;
       border-radius: 999px;
-      color: var(--blue-dark);
-      background: #eff6ff;
+      color: #991b1b;
+      background: var(--panel);
       padding: 10px 16px;
       font-size: 14px;
       font-weight: 850;
       cursor: pointer;
+      box-shadow: 0 8px 18px rgba(248, 113, 113, 0.12);
     }
 
-    .mode-toggle.active {
+    .mode-toggle.active,
+    .mode-option.active {
       color: #ffffff;
-      background: var(--blue);
-      border-color: var(--blue);
+      background: #dc2626;
+      border-color: #f87171;
+      box-shadow: 0 0 0 6px rgba(248, 113, 113, 0.22), 0 12px 24px rgba(220, 38, 38, 0.25);
     }
 
     .dictation-options {
@@ -451,20 +454,15 @@
     }
 
     .mode-option {
-      border: 1px solid var(--line);
+      border: 2px solid #fb7185;
       border-radius: 999px;
-      color: var(--muted);
+      color: #991b1b;
       background: var(--panel);
       padding: 8px 12px;
       font-size: 12px;
       font-weight: 850;
       cursor: pointer;
-    }
-
-    .mode-option.active {
-      color: #ffffff;
-      background: var(--indigo);
-      border-color: var(--indigo);
+      box-shadow: 0 8px 18px rgba(248, 113, 113, 0.12);
     }
 
     .pills {
@@ -1511,7 +1509,7 @@
       document.getElementById("dictationModeToggle").classList.toggle("active", dictationActive);
       document.getElementById("dictationOptions").classList.toggle("visible", dictationActive);
       document.querySelectorAll("[data-dictation-mode]").forEach(button => {
-        button.classList.toggle("active", button.dataset.dictationMode === state.dictationMode);
+        button.classList.toggle("active", dictationActive && button.dataset.dictationMode === state.dictationMode);
       });
       document.querySelector(".intro").textContent = dictationActive ? getModeLabel() : "Ambient Mode";
       recordCard.classList.toggle("strict", dictationActive);
@@ -2051,8 +2049,13 @@
 
     document.querySelectorAll("[data-dictation-mode]").forEach(button => {
       button.addEventListener("click", () => {
-        state.inputMode = "dictation";
-        state.dictationMode = button.dataset.dictationMode;
+        const sameActiveMode = state.inputMode === "dictation" && state.dictationMode === button.dataset.dictationMode;
+        if (sameActiveMode) {
+          state.inputMode = "ambient";
+        } else {
+          state.inputMode = "dictation";
+          state.dictationMode = button.dataset.dictationMode;
+        }
         updateModeUi();
         focusKeyboardShortcuts();
       });
